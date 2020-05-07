@@ -1,11 +1,8 @@
-# Config file for automatic testing at travis-ci.com
-
 language: python
 python:
   - 3.8
   - 3.7
   - 3.6
-  - 3.5
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: pip install -U tox-travis
@@ -22,7 +19,7 @@ deploy:
   distributions: sdist bdist_wheel
   user: lonsty
   password:
-    secure: PLEASE_REPLACE_ME
+    secure: SKdD2zy7vIpr0R50ITPyTq1a6rhjEKbo5QS5CmHnKpSy4jyk/KBZVjIHjAJHhw0ifZIOZcVKgHGIeMS6qTDD5L7QzaBLxcjWg5C2X8JShCQN45+afLHBjV8ocXvR1jj8rZNFAyVwfUuh67vNTzkDRKPuNOzrRU/iDz20VpIwa2fBURpdN4q7LDVfgYg3Djg9T3IlOhv5Cb7O3s/o/RChwHnlos3zC+8lC9O/kpCLEgSQu0NNk9RBcPFGO7afR2BjmaGQfb3Clz59VAiXRVHzqbXscGCehVIP5WAtzzpcPy9B9JRk03UBg0OGkSWF5KJ3qPLZo7QUJ/2IC/wxiQlKUUJDW9rgmZmSgKfABz2zitC8WA31KHrRG2suIHwwGiS6S3WxbH+YmqydMkEE4ys/ITi8NYFe11Rqst56Z4SLZJFMOK0sSh6rjArJJtac89g5h0OVT9kJEwXUG3gM6YZZvQcFvgyNckiXU93buzwPrRIpTWOGevTHB5vA1Uy1M8fHLZDktATFoLb+DPxe8Mk6MLfgMqnBLb8QXG6ker55w3cmaIQS79bXYT6JWnZILxnKYkuNa+EeOcFUFG1sZMSuqdY6q9FxT5nsn5VqU9ozK3p45ALuk+TwY29yfEuyeshnkmQmDHeEPsaYiLisMA4FwwnHuKqzk5MYFkRujTOO8x8=
   on:
     tags: true
     repo: lonsty/musicftdl

@@ -12,7 +12,6 @@ def print_table(title, items):
     table = PrettyTable(title, border=True, hrules=1, header_style='upper', align='m')
     for item in items: table.add_row(item)
     print(table)
-    return table
 
 
 def retry(exceptions, tries=3, delay=1, backoff=2, logger=None):

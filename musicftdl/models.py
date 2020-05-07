@@ -1,9 +1,12 @@
 # @Author: allen
 # @Date: May 05 15:56 2020
+import os
 from typing import List
 
 from dateutil import parser
 from pydantic import BaseModel
+
+from musicftdl.utils import convert_to_safe_filename, mkdirs_if_not_exist
 
 
 class API(BaseModel):
@@ -33,18 +36,28 @@ class SearchResult(BaseModel):
     str_media_mid: str = None
 
     @property
+    def singer_mid(self):
+        if self.singers_mid:
+            return self.singers_mid[0]
+
+    @property
     def singer_name(self):
         return '&'.join(self.singers_name)
 
 
 class Song(BaseModel):
+    singers_mid: list= None
+    singers_name: list = None
     song_mid: str = None
     song_name: str = None
     song_index: int = None
-    singers_mid: list= None
-    singers_name: list = None
     url: str = None
     str_media_mid: str = None
+
+    @property
+    def singer_mid(self):
+        if self.singers_mid:
+            return self.singers_mid[0]
 
     @property
     def singer_name(self):
@@ -52,17 +65,22 @@ class Song(BaseModel):
 
 
 class Album(BaseModel):
+    singers_mid: list = None
+    singers_name: list = None
     album_mid: str = None
     album_name: str = None
     album_type: str = None
-    Album_index: int = None
+    album_index: int = None
     company: str = None
     publish_time: str = None
-    singers_mid: list = None
-    singers_name: list = None
     album_cover_url: str = None
     album_cover_content: bytes = None
     songs: List[Song] = None
+
+    @property
+    def singer_mid(self):
+        if self.singers_mid:
+            return self.singers_mid[0]
 
     @property
     def singer_name(self):
@@ -86,17 +104,30 @@ class SongInfo(BaseModel):
     singers_name: list = None
     album_mid: str = None
     album_name: str = None
+    album_cover_url: str = None
+    album_cover_content: bytes = None
     song_index: int = None
     company: str = None
     genre: str = None
     introduction: str = None
     language: str = None
     publish_time: str = None
-    # url: str = None
+    url: str = None
+    str_media_mid: str = None
+
+    @property
+    def lead_singer_mid(self):
+        if self.singers_mid:
+            return self.singers_mid[0]
 
     @property
     def singer_name(self):
         return '&'.join(self.singers_name)
+
+    @property
+    def lead_singer_name(self):
+        if self.singers_name:
+            return self.singers_name[0]
 
     @property
     def publish_date(self):
@@ -105,13 +136,16 @@ class SongInfo(BaseModel):
 
 class DownloadArgs(BaseModel):
     resource: str = None
-    singer: bool = None
-    album: bool = None
-    fuzzy: bool = None
+    singer: bool = False
+    album: bool = False
+    fuzzy: bool = False
+    overwrite: bool = False
     destination: str = None
     name_style: int = None
-    classified: bool = None
+    classified: bool = True
     format: str = None
+    page: int = None
+    page_size: int = None
 
     @property
     def extension(self):
@@ -122,8 +156,21 @@ class DownloadArgs(BaseModel):
 
     def format_name(self, song: SongInfo):
         if self.name_style == 3:
-            return f'{song.singer_name} - {song.album_name} - {song.song_name}{self.extension}'
+            basename = f'{song.singer_name} - {song.album_name} - {song.song_name}{self.extension}'
         elif self.name_style == 2:
-            return f'{song.singer_name} - {song.song_name}{self.extension}'
+            basename = f'{song.singer_name} - {song.song_name}{self.extension}'
         else:
-            return f'{song.song_name}{self.extension}'
+            basename = f'{song.song_name}{self.extension}'
+        return convert_to_safe_filename(basename)
+
+    def filename(self, song: SongInfo):
+        basename = self.format_name(song)
+        paths = [self.destination,
+                 convert_to_safe_filename(song.lead_singer_name),
+                 convert_to_safe_filename(song.album_name)]
+        if self.classified:
+            folder = os.path.join(*paths)
+        else:
+            folder = paths[0]
+        mkdirs_if_not_exist(folder)
+        return os.path.join(folder, basename)

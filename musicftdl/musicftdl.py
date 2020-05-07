@@ -1,11 +1,15 @@
 """Main module."""
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait
+import os
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
+from typing import List
 
 import eyed3
-from requests import Response, Session
+from requests import Response, Session, exceptions
 
-from musicftdl.models import Consts, SearchResult, Singer, Album, Song, SongInfo, DownloadArgs
+from musicftdl.models import (Album, Consts, DownloadArgs, SearchResult,
+                              Singer, Song, SongInfo)
+from musicftdl.utils import retry
 
 consts = Consts()
 thread_local = threading.local()
@@ -18,186 +22,176 @@ def _get_session():
     return thread_local.session
 
 
+class DataNotFoundError(Exception):
+    pass
+
+
+@retry(Exception)
 def session_request(url: str, method: str='GET') -> Response:
     session = _get_session()
-    with session.request(method, url, headers=consts.headers, timeout=consts.timeout) as resp:
-        resp.raise_for_status()
-    return resp
+    try:
+        with session.request(method, url, headers=consts.headers, timeout=consts.timeout) as resp:
+            resp.raise_for_status()
+            return resp
+    except exceptions.MissingSchema:
+        pass
 
 
-def search(key: str, page: int=1, page_size: int=10) -> list:
-    """
-    Search by key, return by target
+def get_json_data(resp):
+    try:
+        res = resp.json()
+    except Exception as e:
+        print(e)
+    else:
+        if res.get('result') != 100:
+            raise DataNotFoundError(res.get('errMsg'))
+        data = res.get('data')
+        if not data:
+            raise DataNotFoundError('Data is empty')
+        return data
 
-    :param key:
-    :param target: 1 song, 2 album, 3 singer
-    :return:
-    """
-    resp = session_request(consts.api.search.format(key, page, page_size))
+
+def search(key: str, page: int=1, page_size: int=20) -> List[SearchResult]:
+    data = get_json_data(session_request(consts.api.search.format(key, page, page_size)))
 
     result = []
-    for item in resp.json().get('data', {}).get('list', []):
+    for item in data.get('list', []):
         result.append(SearchResult(
-            singers_mid=[it.get('mid') for it in item.get('singer', {})],
-            singers_name=[it.get('name') for it in item.get('singer', {})],
+            singers_mid=[it.get('mid') for it in item.get('singer', [{}])],
+            singers_name=[it.get('name') for it in item.get('singer', [{}])],
             album_name=item.get('albumname'),
             album_mid=item.get('albummid'),
             song_name=item.get('songname'),
             song_mid=item.get('songmid'),
-            str_media_mid=item.get('strMediaMid')))
+            str_media_mid=item.get('strMediaMid', '')))
     return result
 
 
-def get_albums(singer_mid: str, page: int=1, page_size: int=50) -> list:
-    resp = session_request(consts.api.singer_album.format(singer_mid, page, page_size))
+def get_singer_albums(singer_mid: str, page: int=1, page_size: int=50) -> List[Album]:
+    data = get_json_data(session_request(consts.api.singer_album.format(singer_mid, page, page_size)))
 
     result = []
-    for idx, item in enumerate(reversed(resp.json().get('data', {}).get('list', []))):
+    for idx, item in enumerate(reversed(data.get('list', []))):
         result.append(Album(
             album_mid=item.get('album_mid'),
             album_name=item.get('album_name'),
             album_type=item.get('albumtype'),
-            Album_index=idx + 1,
+            album_index=idx + 1,
             company=item.get('company', {}).get('company_name'),
             publish_time=item.get('pub_time'),
-            singers_mid=[it.get('singer_mid') for it in item.get('singers', {})],
-            singers_name=[it.get('singer_name') for it in item.get('singers', {})]))
+            singers_mid=[it.get('singer_mid') for it in item.get('singers', [{}])],
+            singers_name=[it.get('singer_name') for it in item.get('singers', [{}])]))
     return result
 
 
-def get_album_cover(album_mid: str):
-    resp = session_request(consts.api.album.format(album_mid))
+def get_album(album_mid: str) -> Album:
+    data = get_json_data(session_request(consts.api.album.format(album_mid)))
 
-    return 'http:' + resp.json().get('data', {}).get('picUrl')
+    album = Album(
+        album_mid=data.get('mid'),
+        album_name=data.get('name'),
+        album_type=None,
+        album_index=None,
+        company=data.get('company'),
+        publish_time=data.get('publishTime'),
+        singers_mid=[it.get('mid') for it in data.get('ar', [{}])],
+        singers_name=[it.get('name') for it in data.get('ar', [{}])],
+        album_cover_url=data.get('picUrl')
+    )
+    return album
+
+def get_album_cover(album_mid: str) -> str:
+    data = get_json_data(session_request(consts.api.album.format(album_mid)))
+
+    return 'http:' + data.get('picUrl')
 
 
-def get_album_songs(album_mid: str) -> list:
-    resp = session_request(consts.api.album_songs.format(album_mid))
+def get_album_songs(album_mid: str) -> List[Song]:
+    data = get_json_data(session_request(consts.api.album_songs.format(album_mid)))
     result = []
 
-    for idx, item in enumerate(resp.json().get('data', {}).get('list', [])):
+    for idx, item in enumerate(data.get('list', [])):
         result.append(Song(
             song_mid=item.get('mid'),
             song_name=item.get('name'),
             song_index=item.get('index_album'),
-            singers_mid=[it.get('mid') for it in item.get('singer', {})],
-            singers_name=[it.get('name') for it in item.get('singer', {})],
+            singers_mid=[it.get('mid') for it in item.get('singer', [{}])],
+            singers_name=[it.get('name') for it in item.get('singer', [{}])],
             str_media_mid=item.get('file', {}).get('media_mid')))
     return result
 
 
-def get_song_url(song_mid: str, type: int='320') -> str:
-    resp = session_request(consts.api.song_url.format(song_mid, type))
-    return resp.json().get('data')
+def get_song_url(song_mid: str, format: str= '320') -> str:
+    return get_json_data(session_request(consts.api.song_url.format(song_mid, format)))
 
 
 def get_song_info(song_mid: str) -> SongInfo:
-    resp = session_request(consts.api.song_info.format(song_mid))
-    data = resp.json().get('data', {})
+    data = get_json_data(session_request(consts.api.song_info.format(song_mid)))
     song_info = SongInfo(
         song_mid=data.get('track_info', {}).get('mid', {}),
         song_name=data.get('track_info', {}).get('name', {}),
-        singers_mid=[it.get('mid') for it in data.get('track_info', {}).get('singer', {})],
-        singers_name=[it.get('name') for it in data.get('track_info', {}).get('singer', {})],
+        singers_mid=[it.get('mid') for it in data.get('track_info', {}).get('singer', [{}])],
+        singers_name=[it.get('name') for it in data.get('track_info', {}).get('singer', [{}])],
         album_mid=data.get('track_info', {}).get('album', {}).get('mid'),
         album_name=data.get('track_info', {}).get('album', {}).get('name'),
         song_index=data.get('track_info', {}).get('index_album'),
-        company=data.get('info', {}).get('company', {}).get('content', {})[0].get('value'),
-        genre=data.get('info', {}).get('genre', {}).get('content', {})[0].get('value'),
-        introduction=data.get('info', {}).get('intro', {}).get('content', {})[0].get('value'),
-        language=data.get('info', {}).get('lan', {}).get('content', {})[0].get('value'),
-        publish_time=data.get('info', {}).get('pub_time', {}).get('content', {})[0].get('value'),
+        company=data.get('info', {}).get('company', {}).get('content', [{}])[0].get('value'),
+        genre=data.get('info', {}).get('genre', {}).get('content', [{}])[0].get('value'),
+        introduction=data.get('info', {}).get('intro', {}).get('content', [{}])[0].get('value'),
+        language=data.get('info', {}).get('lan', {}).get('content', [{}])[0].get('value'),
+        publish_time=data.get('info', {}).get('pub_time', {}).get('content', [{}])[0].get('value'),
     )
 
     return song_info
 
 
-def download_music(url: str, filename: str):
+def download_music(url: str, filename: str, overwrite: bool=False):
+    if os.path.isfile(filename) and not overwrite:
+        return
+
     with open(filename, 'wb') as f:
         for chunk in session_request(url).iter_content(8192):
             f.write(chunk)
-    add_tags()
 
 
-def add_tags(filename: str, song: SongInfo, cover: str):
-    # with eyed3.load(filename) as audiofile:
+def add_tags(filename: str, song_info: SongInfo):
     audiofile = eyed3.load(filename)
 
-    audiofile.tag.album = song.album_name
-    audiofile.tag.album_artist = song.singer_name
+    audiofile.tag.album = song_info.album_name
+    audiofile.tag.album_artist = song_info.singer_name
     # audiofile.tag.album_type = song.genre
-
-    audiofile.tag.title = song.song_name
-    audiofile.tag.artist = song.singer_name
-
-    audiofile.tag.track_num = (song.song_index, 0)
+    audiofile.tag.title = song_info.song_name
+    audiofile.tag.artist = song_info.singer_name
+    audiofile.tag.track_num = (song_info.song_index, 0)
     audiofile.tag.disc_num = (None, None)
-    audiofile.tag.publisher = song.company
-    audiofile.tag.copyright = song.company
-
-    audiofile.tag.recording_date = song.publish_date
-    audiofile.tag.release_date = song.publish_time
+    audiofile.tag.publisher = song_info.company
+    audiofile.tag.copyright = song_info.company
+    audiofile.tag.recording_date = song_info.publish_date
+    audiofile.tag.release_date = song_info.publish_time
     # audiofile.tag.best_release_date = song.publish_date
-
-    with session_request(cover) as resp:
-        audiofile.tag.images.set(3, resp.content, 'image/jepg', song.album_name)
-
+    audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jepg', song_info.album_name)
     audiofile.tag.save(encoding='utf-8')
 
 
-def main(**kwargs):
-    args = DownloadArgs(**kwargs)
-    pool = ThreadPoolExecutor(max_workers=20)
-    album_songs_futures = {}
-    album_cover_url_futures = {}
-    album_cover_content_futures = {}
-    song_url_futures = {}
-    song_content_futures = {}
-
-    if args.fuzzy:
-        result = search(args.resource, page=1, page_size=1)
-        assert result, f'Resource <{args.resource}> not found!'
-
-        singer = Singer(singer_mid=result[0].singers_mid[0], singer_name=result[0].singer_name)
-
-        singer.albums = get_albums(singer.singer_mid)
-
-        # TODO
-        album_songs_futures = {pool.submit(get_album_songs, album.album_mid): album for album in singer.albums}
-        album_cover_url_futures = {pool.submit(get_album_cover, album.album_mid): album for album in singer.albums}
-
-        for future in as_completed(album_cover_url_futures):
-            try:
-                result = future.result()
-            except Exception:
-                pass
-            else:
-                album = album_cover_url_futures[future]
-                album.album_cover_url = result
-                album_cover_content_futures[pool.submit(session_request, result)] = album
+def download_with_tags(filename: str, song_info: SongInfo, overwrite: bool=False):
+    download_music(song_info.url, filename, overwrite)
+    add_tags(filename, song_info)
+    print(filename)
 
 
-        for future in as_completed(album_songs_futures):
-            try:
-                result = future.result()
-            except Exception:
-                pass
-            else:
-                album = album_songs_futures[future]
-                album.songs = result
-                for song in result:
-                    song_url_futures[pool.submit(get_song_url, song.song_mid)] = song
+def fetch_album_chore(album: Album, args: DownloadArgs) -> Album:
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        album_songs = pool.submit(get_album_songs, album.album_mid)
+        album_cover_url = pool.submit(get_album_cover, album.album_mid)
+        wait([album_songs, album_cover_url])
+        album.songs = album_songs.result()
+        song_url_futures = {pool.submit(get_song_url, song.song_mid, args.format): song
+                            for song in album.songs}
 
+        album.album_cover_url = album_cover_url.result()
+        album.album_cover_content = session_request(album.album_cover_url).content
 
-        for future in as_completed(album_cover_content_futures):
-            try:
-                result = future.result()
-            except Exception:
-                pass
-            else:
-                album_cover_content_futures[future].album_cover_content = result
-
-
+        download_futures = {}
         for future in as_completed(song_url_futures):
             try:
                 result = future.result()
@@ -206,16 +200,59 @@ def main(**kwargs):
             else:
                 song = song_url_futures[future]
                 song.url = result
-                song_content_futures[pool.submit(download_music(result, args.format_name(song)))] = song
+                song_info = SongInfo(
+                    song_mid=song.song_mid,
+                    song_name=song.song_name,
+                    singers_mid=song.singers_mid,
+                    singers_name=song.singers_name,
+                    album_mid=album.album_mid,
+                    album_name=album.album_name,
+                    album_cover_url=album.album_cover_url,
+                    album_cover_content=album.album_cover_content,
+                    song_index=song.song_index,
+                    company=album.company,
+                    genre=None,
+                    introduction=None,
+                    language=None,
+                    publish_time=album.publish_time,
+                    url=result,
+                    str_media_mid=song.str_media_mid
+                )
+                download_futures[pool.submit(download_with_tags, args.filename(song_info),
+                                             song_info, args.overwrite)] = song_info
+        wait(download_futures)
+    return album
 
-        # TODO
+
+def _download_by_song_mid(song_mid, args):
+    song_info = get_song_info(song_mid)
+    assert song_info.song_mid, f'Song <{song_mid}> not found!'
+    song_info.url = get_song_url(song_info.song_mid, args.format)
+    song_info.album_cover_url = get_album_cover(song_info.album_mid)
+    song_info.album_cover_content = session_request(song_info.album_cover_url).content
+    download_with_tags(args.filename(song_info), song_info, args.overwrite)
 
 
+def download(args: DownloadArgs):
+    if not any([args.fuzzy, args.singer, args.album]):
+        return _download_by_song_mid(args.resource, args)
 
-        for album in singer.albums:
-            album.album_cover_url = get_album_cover(album.album_mid)
-            album.songs = get_album_songs(album.album_mid)
-            break
-        for song in singer.albums[0].songs:
-            song.url = get_song_url(song.song_mid)
-        pass
+    if args.singer:
+        albums = get_singer_albums(args.resource, page=args.page, page_size=args.page_size)
+        assert albums, f'Singer <{args.resource}> not found!'
+        singer = Singer(singer_mid=args.resource, singer_name=albums[0].singer_name, albums=albums)
+    elif args.album:
+        album = get_album(args.resource)
+        assert album.album_mid, f'Album <{args.resource}> not found!'
+        singer = Singer(singer_mid=album.singer_mid, singer_name=album.singer_name, albums=[album])
+    else:
+        result = search(args.resource, page=1, page_size=1)
+        assert result, f'Resource <{args.resource}> not found!'
+
+        # singer = Singer(singer_mid=result[0].singer_mid, singer_name=result[0].singer_name,
+        #                 albums=get_singer_albums(result[0].singer_mid))
+
+        return _download_by_song_mid(result[0].song_mid, args)
+
+    for album in singer.albums:
+        fetch_album_chore(album, args)

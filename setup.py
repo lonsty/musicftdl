@@ -2,7 +2,7 @@
 
 """The setup script."""
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -10,7 +10,8 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=7.0', ]
+requirements = ['Click>=7.0', 'eyeD3>=0.9.5', 'pydantic>=1.5.1', 'requests>=2.23.0',
+                'prettytable>=0.7.2', 'python-dateutil>=2.8.1']
 
 setup_requirements = [ ]
 
@@ -33,7 +34,7 @@ setup(
     description="A CLI tool to download music for Jay Chou and other singers with full song tags.",
     entry_points={
         'console_scripts': [
-            'musicftdl=musicftdl.cli:main',
+            'musicftdl=musicftdl.cli:cli',
         ],
     },
     install_requires=requirements,
