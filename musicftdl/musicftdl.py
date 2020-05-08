@@ -170,7 +170,7 @@ def add_tags(filename: str, song_info: SongInfo):
     # audiofile.tag.album_type = song.genre
     audiofile.tag.genre = song_info.genre
     audiofile.tag.title = song_info.song_name
-    audiofile.tag.artist = song_info.singer_name
+    audiofile.tag.artist = song_info.album_singer_name
     audiofile.tag.track_num = (song_info.song_index, 0)
     audiofile.tag.disc_num = (None, None)
     audiofile.tag.publisher = song_info.company
