@@ -9,6 +9,7 @@ from requests import Response, Session, exceptions
 
 from musicftdl.models import (Album, Consts, DownloadArgs, SearchResult,
                               Singer, Song, SongInfo)
+from musicftdl.id3_genres import Genre
 from musicftdl.utils import retry
 
 consts = Consts()
@@ -42,6 +43,7 @@ def get_json_data(resp):
         res = resp.json()
     except Exception as e:
         print(e)
+        return {}
     else:
         if res.get('result') != 100:
             raise DataNotFoundError(res.get('errMsg'))
@@ -63,6 +65,7 @@ def search(key: str, page: int=1, page_size: int=20) -> List[SearchResult]:
             album_mid=item.get('albummid'),
             song_name=item.get('songname'),
             song_mid=item.get('songmid'),
+            duration=item.get('interval'),
             str_media_mid=item.get('strMediaMid', '')))
     return result
 
@@ -77,6 +80,8 @@ def get_singer_albums(singer_mid: str, page: int=1, page_size: int=50) -> List[A
             album_name=item.get('album_name'),
             album_type=item.get('albumtype'),
             album_index=idx + 1,
+            language=item.get('lan'),
+            song_count=item.get('latest_song', {}).get('song_count'),
             company=item.get('company', {}).get('company_name'),
             publish_time=item.get('pub_time'),
             singers_mid=[it.get('singer_mid') for it in item.get('singers', [{}])],
@@ -100,6 +105,7 @@ def get_album(album_mid: str) -> Album:
     )
     return album
 
+
 def get_album_cover(album_mid: str) -> str:
     data = get_json_data(session_request(consts.api.album.format(album_mid)))
 
@@ -117,6 +123,8 @@ def get_album_songs(album_mid: str) -> List[Song]:
             song_index=item.get('index_album'),
             singers_mid=[it.get('mid') for it in item.get('singer', [{}])],
             singers_name=[it.get('name') for it in item.get('singer', [{}])],
+            duration=item.get('interval'),
+            genre=item.get('genre'),
             str_media_mid=item.get('file', {}).get('media_mid')))
     return result
 
@@ -128,20 +136,20 @@ def get_song_url(song_mid: str, format: str= '320') -> str:
 def get_song_info(song_mid: str) -> SongInfo:
     data = get_json_data(session_request(consts.api.song_info.format(song_mid)))
     song_info = SongInfo(
-        song_mid=data.get('track_info', {}).get('mid', {}),
-        song_name=data.get('track_info', {}).get('name', {}),
+        song_mid=data.get('track_info', {}).get('mid'),
+        song_name=data.get('track_info', {}).get('name'),
+        duration=data.get('track_info', {}).get('interval'),
         singers_mid=[it.get('mid') for it in data.get('track_info', {}).get('singer', [{}])],
         singers_name=[it.get('name') for it in data.get('track_info', {}).get('singer', [{}])],
         album_mid=data.get('track_info', {}).get('album', {}).get('mid'),
         album_name=data.get('track_info', {}).get('album', {}).get('name'),
         song_index=data.get('track_info', {}).get('index_album'),
         company=data.get('info', {}).get('company', {}).get('content', [{}])[0].get('value'),
-        genre=data.get('info', {}).get('genre', {}).get('content', [{}])[0].get('value'),
+        genre=Genre.get_num(data.get('info', {}).get('genre', {}).get('content', [{}])[0].get('value')),
         introduction=data.get('info', {}).get('intro', {}).get('content', [{}])[0].get('value'),
         language=data.get('info', {}).get('lan', {}).get('content', [{}])[0].get('value'),
         publish_time=data.get('info', {}).get('pub_time', {}).get('content', [{}])[0].get('value'),
     )
-
     return song_info
 
 
@@ -160,6 +168,7 @@ def add_tags(filename: str, song_info: SongInfo):
     audiofile.tag.album = song_info.album_name
     audiofile.tag.album_artist = song_info.singer_name
     # audiofile.tag.album_type = song.genre
+    audiofile.tag.genre = song_info.genre
     audiofile.tag.title = song_info.song_name
     audiofile.tag.artist = song_info.singer_name
     audiofile.tag.track_num = (song_info.song_index, 0)
@@ -169,27 +178,25 @@ def add_tags(filename: str, song_info: SongInfo):
     audiofile.tag.recording_date = song_info.publish_date
     audiofile.tag.release_date = song_info.publish_time
     # audiofile.tag.best_release_date = song.publish_date
-    audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jepg', song_info.album_name)
+    audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jpeg', song_info.album_name)
     audiofile.tag.save(encoding='utf-8')
 
 
-def download_with_tags(filename: str, song_info: SongInfo, overwrite: bool=False):
+def download_with_tags(filename: str, song_info: SongInfo, overwrite: bool=False, retag: bool=True):
     download_music(song_info.url, filename, overwrite)
-    add_tags(filename, song_info)
+    if retag:
+        add_tags(filename, song_info)
     print(filename)
 
 
 def fetch_album_chore(album: Album, args: DownloadArgs) -> Album:
     with ThreadPoolExecutor(max_workers=20) as pool:
-        album_songs = pool.submit(get_album_songs, album.album_mid)
-        album_cover_url = pool.submit(get_album_cover, album.album_mid)
-        wait([album_songs, album_cover_url])
-        album.songs = album_songs.result()
+        album.songs = get_album_songs(album.album_mid)
         song_url_futures = {pool.submit(get_song_url, song.song_mid, args.format): song
                             for song in album.songs}
 
-        album.album_cover_url = album_cover_url.result()
-        album.album_cover_content = session_request(album.album_cover_url).content
+        cover_resp = session_request(album.album_cover_bg_url)
+        album.album_cover_content = cover_resp.content if cover_resp.status_code == 200 else b''
 
         download_futures = {}
         for future in as_completed(song_url_futures):
@@ -207,19 +214,21 @@ def fetch_album_chore(album: Album, args: DownloadArgs) -> Album:
                     singers_name=song.singers_name,
                     album_mid=album.album_mid,
                     album_name=album.album_name,
-                    album_cover_url=album.album_cover_url,
+                    album_singers_mid=album.singers_mid,
+                    album_singers_name=album.singers_name,
+                    album_cover_url=album.album_cover_bg_url,
                     album_cover_content=album.album_cover_content,
                     song_index=song.song_index,
                     company=album.company,
-                    genre=None,
+                    genre=song.genre,
                     introduction=None,
-                    language=None,
+                    language=album.language,
                     publish_time=album.publish_time,
                     url=result,
                     str_media_mid=song.str_media_mid
                 )
                 download_futures[pool.submit(download_with_tags, args.filename(song_info),
-                                             song_info, args.overwrite)] = song_info
+                                             song_info, args.overwrite, args.retag)] = song_info
         wait(download_futures)
     return album
 
@@ -228,9 +237,8 @@ def _download_by_song_mid(song_mid, args):
     song_info = get_song_info(song_mid)
     assert song_info.song_mid, f'Song <{song_mid}> not found!'
     song_info.url = get_song_url(song_info.song_mid, args.format)
-    song_info.album_cover_url = get_album_cover(song_info.album_mid)
-    song_info.album_cover_content = session_request(song_info.album_cover_url).content
-    download_with_tags(args.filename(song_info), song_info, args.overwrite)
+    song_info.album_cover_content = session_request(song_info.album_cover_bg_url).content
+    download_with_tags(args.filename(song_info), song_info, args.overwrite, args.retag)
 
 
 def download(args: DownloadArgs):

@@ -4,9 +4,9 @@ import os
 from typing import List
 
 from dateutil import parser
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
-from musicftdl.utils import convert_to_safe_filename, mkdirs_if_not_exist
+from musicftdl.utils import convert_to_safe_filename, mkdirs_if_not_exist, convert_seconds_to_dtstr
 
 
 class API(BaseModel):
@@ -22,7 +22,6 @@ class Consts(BaseModel):
     api: API = API()
     headers: dict = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, '
                                    'like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
-    proxies: dict = {'http': 'http://10.57.197.116:50030', 'https': 'https://10.57.197.116:50030'}
     timeout: tuple = (15, 30)
 
 
@@ -33,16 +32,20 @@ class SearchResult(BaseModel):
     album_name: str = None
     song_mid: str = None
     song_name: str = None
+    duration: int = None
     str_media_mid: str = None
+
+    @validator('duration')
+    def convert_int_to_str(cls, v):
+        return convert_seconds_to_dtstr(v)
 
     @property
     def singer_mid(self):
-        if self.singers_mid:
-            return self.singers_mid[0]
+        return self.singers_mid[0] if self.singers_mid else None
 
     @property
     def singer_name(self):
-        return '&'.join(self.singers_name)
+        return '&'.join(self.singers_name) if self.singers_name else None
 
 
 class Song(BaseModel):
@@ -51,17 +54,22 @@ class Song(BaseModel):
     song_mid: str = None
     song_name: str = None
     song_index: int = None
+    duration: int = None
+    genre: int = None
     url: str = None
     str_media_mid: str = None
 
+    @validator('duration')
+    def convert_int_to_str(cls, v):
+        return convert_seconds_to_dtstr(v)
+
     @property
     def singer_mid(self):
-        if self.singers_mid:
-            return self.singers_mid[0]
+        return self.singers_mid[0] if self.singers_mid else None
 
     @property
     def singer_name(self):
-        return '&'.join(self.singers_name)
+        return '&'.join(self.singers_name) if self.singers_name else None
 
 
 class Album(BaseModel):
@@ -71,6 +79,8 @@ class Album(BaseModel):
     album_name: str = None
     album_type: str = None
     album_index: int = None
+    language: str = None
+    song_count: int = None
     company: str = None
     publish_time: str = None
     album_cover_url: str = None
@@ -79,16 +89,25 @@ class Album(BaseModel):
 
     @property
     def singer_mid(self):
-        if self.singers_mid:
-            return self.singers_mid[0]
+        return self.singers_mid[0] if self.singers_mid else None
 
     @property
     def singer_name(self):
-        return '&'.join(self.singers_name)
+        return '&'.join(self.singers_name) if self.singers_name else None
 
     @property
     def publish_date(self):
         return parser.parse(self.publish_time)
+
+    @property
+    def album_cover_bg_url(self):
+        if self.album_mid:
+            return f'https://y.gtimg.cn/music/photo_new/T002R800x800M000{self.album_mid}.jpg?max_age=2592000'
+
+    @property
+    def singer_pic_bg_url(self):
+        if self.singer_mid:
+            return f'https://y.gtimg.cn/music/photo_new/T001R800x800M000{self.singer_mid}.jpg?max_age=2592000'
 
 
 class Singer(BaseModel):
@@ -100,38 +119,45 @@ class Singer(BaseModel):
 class SongInfo(BaseModel):
     song_mid: str = None
     song_name: str = None
+    duration: int = None
     singers_mid: list= None
     singers_name: list = None
     album_mid: str = None
     album_name: str = None
-    album_cover_url: str = None
-    album_cover_content: bytes = None
+    album_singers_mid: list = None
+    album_singers_name: list = None
     song_index: int = None
     company: str = None
-    genre: str = None
     introduction: str = None
     language: str = None
+    genre: int = None
     publish_time: str = None
     url: str = None
+    album_cover_url: str = None
+    album_cover_content: bytes = None
     str_media_mid: str = None
 
-    @property
-    def lead_singer_mid(self):
-        if self.singers_mid:
-            return self.singers_mid[0]
+    @validator('duration')
+    def convert_int_to_str(cls, v):
+        return convert_seconds_to_dtstr(v)
+
 
     @property
     def singer_name(self):
-        return '&'.join(self.singers_name)
+        return '&'.join(self.singers_name) if self.singers_name else None
 
     @property
-    def lead_singer_name(self):
-        if self.singers_name:
-            return self.singers_name[0]
+    def album_singer_name(self):
+        return '&'.join(self.album_singers_name) if self.album_singers_name else self.singer_name
 
     @property
     def publish_date(self):
         return parser.parse(self.publish_time)
+
+    @property
+    def album_cover_bg_url(self):
+        if self.album_mid:
+            return f'https://y.gtimg.cn/music/photo_new/T002R800x800M000{self.album_mid}.jpg?max_age=2592000'
 
 
 class DownloadArgs(BaseModel):
@@ -149,28 +175,27 @@ class DownloadArgs(BaseModel):
 
     @property
     def extension(self):
-        if self.format in ['128', '320']:
-            return '.mp3'
-        else:
-            return '.' + self.format
+        return 'mp3' if self.format in ['128', '320'] else self.format
 
     def format_name(self, song: SongInfo):
         if self.name_style == 3:
-            basename = f'{song.singer_name} - {song.album_name} - {song.song_name}{self.extension}'
+            basename = f'{song.singer_name} - {song.album_name} - {song.song_name}.{self.extension}'
         elif self.name_style == 2:
-            basename = f'{song.singer_name} - {song.song_name}{self.extension}'
+            basename = f'{song.singer_name} - {song.song_name}.{self.extension}'
         else:
-            basename = f'{song.song_name}{self.extension}'
+            basename = f'{song.song_name}.{self.extension}'
         return convert_to_safe_filename(basename)
 
     def filename(self, song: SongInfo):
         basename = self.format_name(song)
         paths = [self.destination,
-                 convert_to_safe_filename(song.lead_singer_name),
+                 convert_to_safe_filename(song.album_singer_name),
                  convert_to_safe_filename(song.album_name)]
-        if self.classified:
-            folder = os.path.join(*paths)
-        else:
-            folder = paths[0]
+        folder = os.path.join(*paths) if self.classified else paths[0]
         mkdirs_if_not_exist(folder)
         return os.path.join(folder, basename)
+
+    @property
+    def retag(self):
+        return True if self.format in ['128', '320'] else False
+
