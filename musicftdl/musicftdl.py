@@ -7,9 +7,9 @@ from typing import List
 import eyed3
 from requests import Response, Session, exceptions
 
+from musicftdl.id3_genres import Genre
 from musicftdl.models import (Album, Consts, DownloadArgs, SearchResult,
                               Singer, Song, SongInfo)
-from musicftdl.id3_genres import Genre
 from musicftdl.utils import retry
 
 consts = Consts()

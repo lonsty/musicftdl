@@ -6,7 +6,8 @@ from typing import List
 from dateutil import parser
 from pydantic import BaseModel, validator
 
-from musicftdl.utils import convert_to_safe_filename, mkdirs_if_not_exist, convert_seconds_to_dtstr
+from musicftdl.utils import (convert_seconds_to_dtstr,
+                             convert_to_safe_filename, mkdirs_if_not_exist)
 
 
 class API(BaseModel):
@@ -198,4 +199,3 @@ class DownloadArgs(BaseModel):
     @property
     def retag(self):
         return True if self.format in ['128', '320'] else False
-
