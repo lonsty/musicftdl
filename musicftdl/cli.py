@@ -10,7 +10,7 @@ from musicftdl.musicftdl import download as dl
 from musicftdl.musicftdl import (get_album_songs, get_singer_albums,
                                  get_song_info, get_song_url)
 from musicftdl.musicftdl import search as search_kw
-from musicftdl.utils import print_table
+from musicftdl.utils import cut_str_to_multi_line, print_table
 
 
 @click.group()
@@ -26,7 +26,12 @@ def cli():
 @click.option('-s', '--page-size', default=20, show_default=True, help='Page size.')
 @click.argument('keywords', nargs=-1)
 def search(keywords, page, page_size):
-    result = search_kw(' '.join(keywords), page, page_size)
+    try:
+        result = search_kw(' '.join(keywords), page, page_size)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
     if result:
         headers = result[0].dict(exclude={'str_media_mid'}).keys()
         rows = [['\n'.join(c) if isinstance(c, List) else c  # noqa
@@ -41,21 +46,33 @@ def search(keywords, page, page_size):
 @click.option('-s', '--page-size', default=50, show_default=True, help='Page size.')
 @click.argument('mid')
 def list(mid, page, page_size):
-    result = get_singer_albums(mid, page, page_size)
+    try:
+        result = get_singer_albums(mid, page, page_size)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
     if result:
-        headers = result[0].dict(exclude={'album_cover_url', 'album_cover_content', 'songs'}).keys()
+        # for item in result:
+        #     item.album_name = cut_str_to_multi_line(item.album_name, 12)
+        headers = result[0].dict(exclude={'album_cover_url', 'album_cover_content', 'songs', 'album_index', 'language'}).keys()
         rows = [['\n'.join(c) if isinstance(c, List) else c  # noqa
-                 for c in item.dict(exclude={'album_cover_url', 'album_cover_content', 'songs'}).values()]  # noqa
+                 for c in item.dict(exclude={'album_cover_url', 'album_cover_content', 'songs', 'album_index', 'language'}).values()]  # noqa
                 for item in result]  # noqa
 
         print_table(headers, rows)
         return
 
-    result = get_album_songs(mid)
+    try:
+        result = get_album_songs(mid)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
     if result:
-        headers = result[0].dict(exclude={'url', 'str_media_mid'}).keys()
+        headers = result[0].dict(exclude={'url', 'str_media_mid', 'genre'}).keys()
         rows = [['\n'.join(c) if isinstance(c, List) else c  # noqa
-                 for c in item.dict(exclude={'url', 'str_media_mid'}).values()]  # noqa
+                 for c in item.dict(exclude={'url', 'str_media_mid', 'genre'}).values()]  # noqa
                 for item in result]  # noqa
 
         print_table(headers, rows)
@@ -64,19 +81,23 @@ def list(mid, page, page_size):
 @cli.command()
 @click.argument('song-mid')
 def show(song_mid):
-    song_info = get_song_info(song_mid)
+    try:
+        song_info = get_song_info(song_mid)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
     if not song_info.song_mid:
         print(f'Song <{song_mid}> not found!')
         sys.exit(1)
 
     intro = song_info.introduction
     if intro:
-        song_info.introduction = '\n'.join([intro[i * 50:(i + 1) * 50]
-                                            for i in range(math.ceil(len(intro) / 50))])
+        song_info.introduction = cut_str_to_multi_line(intro, 50)
     headers = ['Category', 'Description']
     rows = [['\n'.join(c) if isinstance(c, List) else c for c in item]
             for item in song_info.dict(exclude={'url', 'str_media_mid', 'album_cover_url',
-                                                'album_cover_content'}).items()]
+                                                'album_cover_content', 'album_singers_mid', 'album_singers_name'}).items()]
     print_table(headers, rows)
     print(get_song_url(song_mid))
 
@@ -103,7 +124,6 @@ def download(**kwargs):
         dl(args)
     except Exception as e:
         print(e)
-    return 0
 
 
 if __name__ == "__main__":
