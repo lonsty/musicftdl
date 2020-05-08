@@ -1,8 +1,10 @@
 # @Author: allen
 # @Date: May 06 14:36 2020
+import math
 import os
 import random
 import time
+from datetime import timedelta
 from functools import wraps
 
 from prettytable import PrettyTable
@@ -58,3 +60,23 @@ def mkdirs_if_not_exist(dir):
 
 def convert_to_safe_filename(filename):
     return "".join([c for c in filename if c not in r'\/:*?"<>|']).strip()
+
+
+# def convert_seconds_to_dtstr(sec: int) -> str:
+#     p = str(timedelta(seconds=sec)).split(':')
+#     return ':'.join(p if int(p[0]) > 0 else p[1:])
+
+
+def convert_seconds_to_dtstr(sec: int) -> str:
+    dt_str = str(timedelta(seconds=sec))
+    return dt_str[-5:] if sec < 3600 else dt_str
+
+
+def cut_str_to_multi_line(s, l=50):
+    """
+
+    :param s: string
+    :param l: length
+    :return:
+    """
+    return '\n'.join([s[i * l:(i + 1) * l] for i in range(math.ceil(len(s) / l))])
