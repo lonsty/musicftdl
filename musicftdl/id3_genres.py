@@ -200,9 +200,9 @@ class Genre:
     inverted_genres = {v: k for k, v in genres.items()}
 
     @classmethod
-    def get_genre(cls, num):
+    def get_genre(cls, num: int) -> str:
         return cls.genres.get(num, 'Unknown')
 
     @classmethod
-    def get_num(cls, genre):
+    def get_num(cls, genre: str) -> int:
         return cls.inverted_genres.get(genre, 12)

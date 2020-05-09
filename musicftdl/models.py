@@ -11,12 +11,12 @@ from musicftdl.utils import (convert_seconds_to_dtstr,
 
 
 class API(BaseModel):
-    search: str = 'https://api.qq.jsososo.com/search?key={}&pageNo={}&pageSize={}'
-    singer_album: str = 'https://api.qq.jsososo.com/singer/album?singermid={}&pageNo={}&pageSize={}'
-    album: str = 'https://api.qq.jsososo.com/album?albummid={}'
-    album_songs: str = 'https://api.qq.jsososo.com/album/songs?albummid={}'
-    song_info: str = 'https://api.qq.jsososo.com/song?songmid={}'
-    song_url: str = 'https://api.qq.jsososo.com/song/url?id={}&type={}'
+    search: str = 'http://mapi.lonsty.me/search?key={}&pageNo={}&pageSize={}'
+    singer_album: str = 'http://mapi.lonsty.me/singer/album?singermid={}&pageNo={}&pageSize={}'
+    album: str = 'http://mapi.lonsty.me/album?albummid={}'
+    album_songs: str = 'http://mapi.lonsty.me/album/songs?albummid={}'
+    song_info: str = 'http://mapi.lonsty.me/song?songmid={}'
+    song_url: str = 'http://mapi.lonsty.me/song/url?id={}&type={}'
 
 
 class Consts(BaseModel):
@@ -169,7 +169,7 @@ class DownloadArgs(BaseModel):
     resource: str = None
     singer: bool = False
     album: bool = False
-    fuzzy: bool = False
+    keyword: bool = False
     overwrite: bool = False
     destination: str = None
     name_style: int = None

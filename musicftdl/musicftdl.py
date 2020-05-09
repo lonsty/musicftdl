@@ -17,7 +17,11 @@ thread_local = threading.local()
 eyed3.log.setLevel("ERROR")
 
 
-def _get_session():
+def _get_session() -> Session:
+    """
+    Get a instance of requests.Session
+    :return: requests.Session
+    """
     if not hasattr(thread_local, "session"):
         thread_local.session = Session()
     return thread_local.session
@@ -28,11 +32,10 @@ class DataNotFoundError(Exception):
 
 
 @retry(Exception)
-def session_request(url: str, method: str='GET', proxies: dict=None) -> Response:
+def session_request(url: str, method: str='GET') -> Response:
     session = _get_session()
     try:
-        with session.request(method, url, headers=consts.headers,
-                             proxies=proxies, timeout=consts.timeout) as resp:
+        with session.request(method, url, headers=consts.headers, timeout=consts.timeout) as resp:
             resp.raise_for_status()
             return resp
     except exceptions.MissingSchema:
@@ -67,7 +70,8 @@ def search(key: str, page: int=1, page_size: int=20) -> List[SearchResult]:
             song_name=item.get('songname'),
             song_mid=item.get('songmid'),
             duration=item.get('interval'),
-            str_media_mid=item.get('strMediaMid', '')))
+            str_media_mid=item.get('strMediaMid', '')
+        ))
     return result
 
 
@@ -86,7 +90,8 @@ def get_singer_albums(singer_mid: str, page: int=1, page_size: int=50) -> List[A
             company=item.get('company', {}).get('company_name'),
             publish_time=item.get('pub_time'),
             singers_mid=[it.get('singer_mid') for it in item.get('singers', [{}])],
-            singers_name=[it.get('singer_name') for it in item.get('singers', [{}])]))
+            singers_name=[it.get('singer_name') for it in item.get('singers', [{}])]
+        ))
     return result
 
 
@@ -126,7 +131,8 @@ def get_album_songs(album_mid: str) -> List[Song]:
             singers_name=[it.get('name') for it in item.get('singer', [{}])],
             duration=item.get('interval'),
             genre=item.get('genre'),
-            str_media_mid=item.get('file', {}).get('media_mid')))
+            str_media_mid=item.get('file', {}).get('media_mid')
+        ))
     return result
 
 
@@ -149,7 +155,7 @@ def get_song_info(song_mid: str) -> SongInfo:
         genre=Genre.get_num(data.get('info', {}).get('genre', {}).get('content', [{}])[0].get('value')),
         introduction=data.get('info', {}).get('intro', {}).get('content', [{}])[0].get('value'),
         language=data.get('info', {}).get('lan', {}).get('content', [{}])[0].get('value'),
-        publish_time=data.get('info', {}).get('pub_time', {}).get('content', [{}])[0].get('value'),
+        publish_time=data.get('info', {}).get('pub_time', {}).get('content', [{}])[0].get('value')
     )
     return song_info
 
@@ -243,7 +249,7 @@ def _download_by_song_mid(song_mid, args):
 
 
 def download(args: DownloadArgs):
-    if not any([args.fuzzy, args.singer, args.album]):
+    if not any([args.singer, args.album, args.keyword]):
         return _download_by_song_mid(args.resource, args)
 
     if args.singer:
@@ -257,9 +263,6 @@ def download(args: DownloadArgs):
     else:
         result = search(args.resource, page=1, page_size=1)
         assert result, f'Resource <{args.resource}> not found!'
-
-        # singer = Singer(singer_mid=result[0].singer_mid, singer_name=result[0].singer_name,
-        #                 albums=get_singer_albums(result[0].singer_mid))
 
         return _download_by_song_mid(result[0].song_mid, args)
 
