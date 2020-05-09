@@ -117,6 +117,7 @@ def show(song_mid):
               type=click.Choice(['128', '320', 'm4a', 'flac', 'ape']), help='Song format.')
 @click.option('-P', '--page', default=1, show_default=True, help='Page No.')
 @click.option('-S', '--page-size', default=50, show_default=True, help='Page size.')
+@click.option('--proxy', default=None, help='Set a HTTP/HTTPS proxy, as format USERNAME:PASSWORD@IP:PORT.')
 @click.argument('resource')
 def download(**kwargs):
     args = DownloadArgs(**kwargs)

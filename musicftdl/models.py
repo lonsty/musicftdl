@@ -21,8 +21,12 @@ class API(BaseModel):
 
 class Consts(BaseModel):
     api: API = API()
-    headers: dict = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, '
-                                   'like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
+    headers: dict = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                                   '(KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36'}
+    proxies = {
+        'http': 'http://183.129.244.16:33238',
+        'https': 'https://183.129.244.16:33238'
+    }
     timeout: tuple = (15, 30)
 
 
@@ -173,6 +177,7 @@ class DownloadArgs(BaseModel):
     format: str = None
     page: int = None
     page_size: int = None
+    proxy: str = None
 
     @property
     def extension(self):
@@ -199,3 +204,13 @@ class DownloadArgs(BaseModel):
     @property
     def retag(self):
         return True if self.format in ['128', '320'] else False
+
+    @property
+    def proxies(self):
+        proxies = None
+        if self.proxy:
+            proxies = {
+                'http': f'http://{self.proxy}',
+                'https': f'https://{self.proxy}'
+            }
+        return proxies

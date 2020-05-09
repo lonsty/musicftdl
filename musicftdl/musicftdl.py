@@ -28,10 +28,11 @@ class DataNotFoundError(Exception):
 
 
 @retry(Exception)
-def session_request(url: str, method: str='GET') -> Response:
+def session_request(url: str, method: str='GET', proxies: dict=None) -> Response:
     session = _get_session()
     try:
-        with session.request(method, url, headers=consts.headers, timeout=consts.timeout) as resp:
+        with session.request(method, url, headers=consts.headers,
+                             proxies=proxies, timeout=consts.timeout) as resp:
             resp.raise_for_status()
             return resp
     except exceptions.MissingSchema:
@@ -165,20 +166,20 @@ def download_music(url: str, filename: str, overwrite: bool=False):
 def add_tags(filename: str, song_info: SongInfo):
     audiofile = eyed3.load(filename)
 
-    audiofile.tag.album = song_info.album_name
-    audiofile.tag.album_artist = song_info.singer_name
-    # audiofile.tag.album_type = song.genre
-    audiofile.tag.genre = song_info.genre
     audiofile.tag.title = song_info.song_name
-    audiofile.tag.artist = song_info.album_singer_name
+    audiofile.tag.artist = song_info.singer_name
+    # audiofile.tag.genre = song_info.genre
+    audiofile.tag.album = song_info.album_name
+    audiofile.tag.album_artist = song_info.album_singer_name
+    # audiofile.tag.album_type = song.genre
     audiofile.tag.track_num = (song_info.song_index, 0)
-    audiofile.tag.disc_num = (None, None)
+    # audiofile.tag.disc_num = (None, None)
     audiofile.tag.publisher = song_info.company
     audiofile.tag.copyright = song_info.company
     audiofile.tag.recording_date = song_info.publish_date
     audiofile.tag.release_date = song_info.publish_time
     # audiofile.tag.best_release_date = song.publish_date
-    audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jpeg', song_info.album_name)
+    audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jpeg', song_info.album_name + '.JPG')
     audiofile.tag.save(encoding='utf-8')
 
 
