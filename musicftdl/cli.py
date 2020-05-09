@@ -99,7 +99,10 @@ def show(song_mid):
             for item in song_info.dict(exclude={'url', 'str_media_mid', 'album_cover_url',
                                                 'album_cover_content', 'album_singers_mid', 'album_singers_name'}).items()]
     print_table(headers, rows)
-    print(get_song_url(song_mid))
+    try:
+        print(get_song_url(song_mid))
+    except Exception as e:
+        print(e)
 
 
 @cli.command()
