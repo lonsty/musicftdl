@@ -39,7 +39,7 @@ def session_request(url: str, method: str='GET') -> Response:
             resp.raise_for_status()
             return resp
     except exceptions.MissingSchema:
-        pass
+        return None
 
 
 def get_json_data(resp):
@@ -161,12 +161,16 @@ def get_song_info(song_mid: str) -> SongInfo:
 
 
 def download_music(url: str, filename: str, overwrite: bool=False):
-    if os.path.isfile(filename) and not overwrite:
+    if os.path.isfile(filename) \
+        and not overwrite \
+        and os.path.getsize(filename) > 0:
         return
 
-    with open(filename, 'wb') as f:
-        for chunk in session_request(url).iter_content(8192):
-            f.write(chunk)
+    resp = session_request(url)
+    if resp is not None:
+        with open(filename, 'wb') as f:
+            for chunk in resp.iter_content(8192):
+                f.write(chunk)
 
 
 def add_tags(filename: str, song_info: SongInfo):
