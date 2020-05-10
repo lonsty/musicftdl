@@ -8,7 +8,6 @@ Welcome to Music Full Tag Downloader's documentation!
    readme
    installation
    usage
-   modules
    contributing
    authors
    history
