@@ -31,7 +31,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    description="A CLI tool to download music for Jay Chou and other singers with full song tags.",
+    description="A CLI tool to download music of Jay Chou and other singers with full song tags.",
     entry_points={
         'console_scripts': [
             'musicftdl=musicftdl.cli:cli',

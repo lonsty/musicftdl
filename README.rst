@@ -16,7 +16,7 @@ Music Full Tag Downloader
 
 
 
-A CLI tool to download music for Jay Chou and other singers with full song tags.
+A CLI tool to download music of Jay Chou and other singers with full song tags.
 
 
 * Free software: MIT license

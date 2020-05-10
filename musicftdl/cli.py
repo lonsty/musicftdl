@@ -14,7 +14,7 @@ from musicftdl.utils import cut_str_to_multi_line, print_table
 
 @click.group()
 def cli():
-    """A CLI tool to download music for Jay Chou and other singers with full song tags."""
+    """A CLI tool to download music of Jay Chou and other singers with full song tags."""
     return 0
 
 

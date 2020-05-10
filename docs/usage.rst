@@ -5,18 +5,26 @@ Usage
 To use Music Full Tag Downloader in terminal:
 
 1. Get the `MID` of singer/album/song, witch is used to download songs :
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: console
 
     $ musicftdl search <KEYWORD1 KEYWORD2 ...>
 
-2. (Optional) List albums of a singer, or songs of a album :
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2. (Optional) Get more information about a singer/album/song:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* List albums of a singer, or list songs of a album :
 
 .. code-block:: console
 
     $  musicftdl list <SINGER_MID | ALBUM_MID>
+
+* Show information of a song :
+
+.. code-block:: console
+
+    $  musicftdl show <SONG_MID>
 
 3. Download songs:
 ^^^^^^^^^^^^^^^^^^
@@ -26,6 +34,14 @@ To use Music Full Tag Downloader in terminal:
 .. code-block:: console
 
     $ musicftdl download <SONG_MID>
+
+* Download the first song in the results by searching for some keywords :
+
+.. code-block:: console
+
+    $ musicftdl download -k <KEYWORD | "KEYWORD1 KEYWORD2 ...">
+
+Note: multiple keywords should be quoted as `"KEYWORD1 KEYWORD2 ..."`.
 
 * Download all songs of a singer by it's singer_mid :
 
@@ -38,12 +54,6 @@ To use Music Full Tag Downloader in terminal:
 .. code-block:: console
 
     $ musicftdl download -a <ALBUM_MID>
-
-* Download the first song in result by searching some keywords :
-
-.. code-block:: console
-
-    $ musicftdl download -k <KEYWORD>
 
 You can get the download options by typing `musicftdl download --help` in ternimal :
 
@@ -73,10 +83,8 @@ You can get the download options by typing `musicftdl download --help` in ternim
       --help                          Show this message and exit.
 
 
-Here is a example for download all 周杰伦's songs :
+Here is a example for download all `周杰伦's` songs with `320k` bitrate, and save to the directory of `/mnt/e/Music/musicftdl` :
 
 .. code-block:: console
 
     $ musicftdl download -d /mnt/e/Music/musicftdl -f 320 -s 0025NhlN2yWrP4
-
-Above command will download all `周杰伦's` songs with `320k` bitrate, and save to the directory of `/mnt/e/Music/musicftdl`.
