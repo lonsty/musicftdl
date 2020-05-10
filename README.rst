@@ -26,12 +26,6 @@ A CLI tool to download music for Jay Chou and other singers with full song tags.
 Features
 --------
 
-* TODO
-
-Credits
--------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+* **Search**: Search songs by keywords.
+* **Download**: Download song(s) by singer/album/song mid or keyword.
+* **Tag**: After downloading, tags are automatically added to the song (eg artist, album, sum of tracks, album cover image, release date), this feature is only available for `MP3` format songs.
