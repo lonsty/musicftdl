@@ -85,7 +85,7 @@ You can get the download options by typing `musicftdl download --help` in ternim
       --help                          Show this message and exit.
 
 
-Here is a example for download all `周杰伦's` songs with `320k` bitrate, and save to the directory of `/mnt/e/Music/musicftdl` :
+Here is an example for download all `周杰伦's` songs with `320k` bitrate, and save to the directory of `/mnt/e/Music/musicftdl` :
 
 .. code-block:: console
 
