@@ -278,5 +278,5 @@ def download(args: DownloadArgs):
         assert result, f'Resource <{args.resource}> not found!'
         return _download_by_song_mid(result[0].song_mid, args)
 
-    for album in singer.albums:
+    for album in args.filter_albums(singer.albums):
         fetch_album_chore(album, args)

@@ -22,8 +22,8 @@ def cli():
 # @click.option('-t', '--type', default='0', show_default=True,
 #               type=click.Choice(['0', '2', '7', '8', '9', '12']),
 #               help='0: song\n2: song list\n7: lyrics\n8: album\n9: singer\n12: mv')
-@click.option('-p', '--page', default=1, show_default=True, help='Page No.')
-@click.option('-s', '--page-size', default=20, show_default=True, help='Page size.')
+@click.option('-P', '--page', default=1, show_default=True, help='Page No.')
+@click.option('-S', '--page-size', default=20, show_default=True, help='Page size.')
 @click.argument('keywords', nargs=-1)
 def search(keywords, page, page_size):
     """Search songs by KEYWORDS."""
@@ -43,8 +43,8 @@ def search(keywords, page, page_size):
 
 
 @cli.command()
-@click.option('-p', '--page', default=1, show_default=True, help='Page No.')
-@click.option('-s', '--page-size', default=50, show_default=True, help='Page size.')
+@click.option('-P', '--page', default=1, show_default=True, help='Page No.')
+@click.option('-S', '--page-size', default=50, show_default=True, help='Page size.')
 @click.argument('mid')
 def list(mid, page, page_size):
     """List albums/songs of the given SINGER/ALBUM MID."""
@@ -113,12 +113,15 @@ def show(song_mid):
 @cli.command()
 @click.option('-s', '--singer', is_flag=True, help='Download songs by SINGER_MID.')
 @click.option('-a', '--album', is_flag=True, help='Download songs by ALBUM_MID.')
-@click.option('-k', '--keyword', is_flag=True, help='Download song by keyword search.')
+@click.option('-k', '--keywords', is_flag=True, help='Download song by searching keywords.')
 @click.option('-o', '--overwrite', is_flag=True, help='Overwrite exist files.')
 @click.option('-d', '--destination', default='.', help='Destination to save songs.')
 @click.option('-n', '--name-style', default='3', show_default=True,
               type=click.Choice(['1', '2', '3']),
               help='1: SONG.ext\n2: SINGER - SONG.ext\n3: SINGER - ALBUM - SONG.ext')
+@click.option('-t', '--album_types', default='SELO', show_default=True,
+              help='Download songs of selected types of albums. S: Studio Album | '
+                   'E: EP Single | L: Live Album | O: Others')
 @click.option('-c/-C', '--classified/--no-classified', 'classified', default=True,
               show_default=True, help='Store in folders classify by singers and albums.')
 @click.option('-f', '--format', default='128', show_default=True,

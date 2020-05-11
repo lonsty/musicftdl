@@ -169,10 +169,11 @@ class DownloadArgs(BaseModel):
     resource: str = None
     singer: bool = False
     album: bool = False
-    keyword: bool = False
+    keywords: bool = False
     overwrite: bool = False
     destination: str = None
     name_style: int = None
+    album_types: str = 'SELO'
     classified: bool = True
     format: str = None
     page: int = None
@@ -183,7 +184,7 @@ class DownloadArgs(BaseModel):
     def extension(self):
         return 'mp3' if self.format in ['128', '320'] else self.format
 
-    def format_name(self, song: SongInfo):
+    def format_name(self, song: SongInfo) -> str:
         if self.name_style == 3:
             basename = f'{song.singer_name} - {song.album_name} - {song.song_name}.{self.extension}'
         elif self.name_style == 2:
@@ -192,7 +193,7 @@ class DownloadArgs(BaseModel):
             basename = f'{song.song_name}.{self.extension}'
         return convert_to_safe_filename(basename)
 
-    def filename(self, song: SongInfo):
+    def filename(self, song: SongInfo) -> str:
         basename = self.format_name(song)
         paths = [self.destination,
                  convert_to_safe_filename(song.album_singer_name),
@@ -200,6 +201,11 @@ class DownloadArgs(BaseModel):
         folder = os.path.join(*paths) if self.classified else paths[0]
         mkdirs_if_not_exist(folder)
         return os.path.join(folder, basename)
+
+    def filter_albums(self, albums: List[Album]) -> List[Album]:
+        types_mp = {'S': '录音室专辑', 'E': 'EP单曲', 'L': '现场专辑', 'O': '其他'}
+        types = [types_mp.get(k) for k in list(self.album_types.upper())]
+        return [album for album in albums if album.album_type in types or '其他' in types]
 
     @property
     def retag(self):
