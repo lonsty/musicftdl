@@ -34,12 +34,10 @@ class DataNotFoundError(Exception):
 @retry(Exception)
 def session_request(url: str, method: str='GET') -> Response:
     session = _get_session()
-    try:
-        with session.request(method, url, headers=consts.headers, timeout=consts.timeout) as resp:
-            resp.raise_for_status()
-            return resp
-    except exceptions.MissingSchema:
-        return None
+
+    with session.request(method, url, headers=consts.headers, timeout=consts.timeout) as resp:
+        resp.raise_for_status()
+        return resp
 
 
 def get_json_data(resp):
@@ -136,7 +134,7 @@ def get_album_songs(album_mid: str) -> List[Song]:
     return result
 
 
-def get_song_url(song_mid: str, format: str= '320') -> str:
+def get_song_url(song_mid: str, format: str= '128') -> str:
     return get_json_data(session_request(consts.api.song_url.format(song_mid, format)))
 
 
@@ -164,40 +162,49 @@ def download_music(url: str, filename: str, overwrite: bool=False):
     if os.path.isfile(filename) \
         and not overwrite \
         and os.path.getsize(filename) > 0:
-        return
+        print(f'{filename} [Skipped]')
+        return False
 
-    resp = session_request(url)
-    if resp is not None:
-        with open(filename, 'wb') as f:
-            for chunk in resp.iter_content(8192):
-                f.write(chunk)
+    try:
+        resp = session_request(url)
+    except Exception as e:
+        print(e)
+    else:
+        if resp is not None:
+            with open(filename, 'wb') as f:
+                for chunk in resp.iter_content(8192):
+                    f.write(chunk)
+            print(filename)
+            return True
 
 
 def add_tags(filename: str, song_info: SongInfo):
-    audiofile = eyed3.load(filename)
+    try:
+        audiofile = eyed3.load(filename)
 
-    audiofile.tag.title = song_info.song_name
-    audiofile.tag.artist = song_info.singer_name
-    # audiofile.tag.genre = song_info.genre
-    audiofile.tag.album = song_info.album_name
-    audiofile.tag.album_artist = song_info.album_singer_name
-    # audiofile.tag.album_type = song.genre
-    audiofile.tag.track_num = (song_info.song_index, 0)
-    # audiofile.tag.disc_num = (None, None)
-    audiofile.tag.publisher = song_info.company
-    audiofile.tag.copyright = song_info.company
-    audiofile.tag.recording_date = song_info.publish_date
-    audiofile.tag.release_date = song_info.publish_time
-    # audiofile.tag.best_release_date = song.publish_date
-    audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jpeg', song_info.album_name + '.JPG')
-    audiofile.tag.save(encoding='utf-8')
+        audiofile.tag.title = song_info.song_name
+        audiofile.tag.artist = song_info.singer_name
+        # audiofile.tag.genre = song_info.genre
+        audiofile.tag.album = song_info.album_name
+        audiofile.tag.album_artist = song_info.album_singer_name
+        # audiofile.tag.album_type = song.genre
+        audiofile.tag.track_num = (song_info.song_index, 0)
+        # audiofile.tag.disc_num = (None, None)
+        audiofile.tag.publisher = song_info.company
+        audiofile.tag.copyright = song_info.company
+        audiofile.tag.recording_date = song_info.publish_date
+        audiofile.tag.release_date = song_info.publish_time
+        # audiofile.tag.best_release_date = song.publish_date
+        audiofile.tag.images.set(3, song_info.album_cover_content, 'image/jpeg', song_info.album_name + '.JPG')
+        audiofile.tag.save(encoding='utf-8')
+    except Exception:
+        pass
 
 
 def download_with_tags(filename: str, song_info: SongInfo, overwrite: bool=False, retag: bool=True):
-    download_music(song_info.url, filename, overwrite)
-    if retag:
+    downloaded = download_music(song_info.url, filename, overwrite)
+    if downloaded and retag:
         add_tags(filename, song_info)
-    print(filename)
 
 
 def fetch_album_chore(album: Album, args: DownloadArgs) -> Album:
@@ -213,8 +220,10 @@ def fetch_album_chore(album: Album, args: DownloadArgs) -> Album:
         for future in as_completed(song_url_futures):
             try:
                 result = future.result()
-            except Exception:
-                pass
+            except Exception as e:
+                song = song_url_futures[future]
+                print(f'{e}, {song.singer_name} - {album.album_name} - '
+                      f'[{song.song_mid} {args.format}] {song.song_name}')
             else:
                 song = song_url_futures[future]
                 song.url = result
@@ -253,7 +262,7 @@ def _download_by_song_mid(song_mid, args):
 
 
 def download(args: DownloadArgs):
-    if not any([args.singer, args.album, args.keyword]):
+    if not any([args.singer, args.album, args.keywords]):
         return _download_by_song_mid(args.resource, args)
 
     if args.singer:
@@ -267,7 +276,6 @@ def download(args: DownloadArgs):
     else:
         result = search(args.resource, page=1, page_size=1)
         assert result, f'Resource <{args.resource}> not found!'
-
         return _download_by_song_mid(result[0].song_mid, args)
 
     for album in singer.albums:
