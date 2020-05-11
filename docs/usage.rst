@@ -14,7 +14,7 @@ To use Music Full Tag Downloader in terminal:
 2. (Optional) Get more information about a singer/album/song:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* List albums of a singer, or list songs of a album :
+* List albums of a singer, or list songs of an album :
 
 .. code-block:: console
 
@@ -49,7 +49,7 @@ Note: multiple keywords should be quoted as `"KEYWORD1 KEYWORD2 ..."`.
 
     $ musicftdl download -s <SINGER_MID>
 
-* Download all songs of a album by it's album_mid :
+* Download all songs of an album by it's album_mid :
 
 .. code-block:: console
 
@@ -61,18 +61,20 @@ You can get the download options by typing `musicftdl download --help` in ternim
 
     Usage: musicftdl download [OPTIONS] RESOURCE
 
-      Download songs by SINGER/ALBUM MID or KEYWORD.
+      Download songs by SINGER/ALBUM MID or KEYWORDS.
 
     Options:
       -s, --singer                    Download songs by SINGER_MID.
       -a, --album                     Download songs by ALBUM_MID.
-      -k, --keyword                   Download song by keyword search.
+      -k, --keywords                  Download song by searching keywords.
       -o, --overwrite                 Overwrite exist files.
       -d, --destination TEXT          Destination to save songs.
-      -n, --name-style [1|2|3]        1: SONG.ext
-                                      2: SINGER - SONG.ext
-                                      3: SINGER -
-                                      ALBUM - SONG.ext  [default: 3]
+      -n, --name-style [1|2|3]        Style of filename. [ 1: SONG.ext | 2: SINGER
+                                      - SONG.ext | 3: SINGER - ALBUM - SONG.ext
+                                      [default: 3]
+      -t, --album_types TEXT          Download songs of selected types of albums.
+                                      [ S: Studio Album | E: EP Single | L: Live
+                                      Album | O: Others ]  [default: SELO]
       -c, --classified / -C, --no-classified
                                       Store in folders classify by singers and
                                       albums.  [default: True]

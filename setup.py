@@ -48,6 +48,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/lonsty/musicftdl',
-    version='0.1.0a',
+    version='0.1.0',
     zip_safe=False,
 )

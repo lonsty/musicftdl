@@ -118,10 +118,10 @@ def show(song_mid):
 @click.option('-d', '--destination', default='.', help='Destination to save songs.')
 @click.option('-n', '--name-style', default='3', show_default=True,
               type=click.Choice(['1', '2', '3']),
-              help='1: SONG.ext\n2: SINGER - SONG.ext\n3: SINGER - ALBUM - SONG.ext')
+              help='Style of filename. [ 1: SONG.ext | 2: SINGER - SONG.ext | 3: SINGER - ALBUM - SONG.ext')
 @click.option('-t', '--album_types', default='SELO', show_default=True,
-              help='Download songs of selected types of albums. S: Studio Album | '
-                   'E: EP Single | L: Live Album | O: Others')
+              help='Download songs of selected types of albums. [ S: Studio Album | '
+                   'E: EP Single | L: Live Album | O: Others ]')
 @click.option('-c/-C', '--classified/--no-classified', 'classified', default=True,
               show_default=True, help='Store in folders classify by singers and albums.')
 @click.option('-f', '--format', default='128', show_default=True,
@@ -131,7 +131,7 @@ def show(song_mid):
 # @click.option('--proxy', default=None, help='Set a HTTP/HTTPS proxy, as format USERNAME:PASSWORD@IP:PORT.')
 @click.argument('resource')
 def download(**kwargs):
-    """Download songs by SINGER/ALBUM MID or KEYWORD."""
+    """Download songs by SINGER/ALBUM MID or KEYWORDS."""
     args = DownloadArgs(**kwargs)
     try:
         dl(args)
