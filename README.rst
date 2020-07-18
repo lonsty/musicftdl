@@ -29,3 +29,11 @@ Features
 * **Search**: Search songs by keywords.
 * **Download**: Download song(s) by singer/album/song mid or keyword.
 * **Tag**: After downloading, tags are automatically added to the song (eg artist, album, sum of tracks, album cover image, release date), this feature is only available for `MP3` format songs.
+
+.. image:: docs/img/SC01.png
+
+.. image:: docs/img/SC02.png
+
+.. image:: docs/img/SC03.png
+
+.. image:: docs/img/SC04.png
