@@ -30,6 +30,19 @@ Features
 * **Download**: Download song(s) by singer/album/song mid or keyword.
 * **Tag**: After downloading, tags are automatically added to the song (eg artist, album, sum of tracks, album cover image, release date), this feature is only available for `MP3` format songs.
 
+Usage
+-----
+
+.. code-block:: console
+
+    $ pip install -U musicftdl
+
+Example for downloading all `周杰伦's` songs with `320k` bitrate, and save to the directory of `/mnt/e/Music/musicftdl` :
+
+.. code-block:: console
+
+    $ musicftdl download -d /mnt/e/Music/musicftdl -f 320 -s 0025NhlN2yWrP4
+
 .. image:: docs/img/SC01.png
 
 .. image:: docs/img/SC02.png
